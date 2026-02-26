@@ -9,7 +9,7 @@ import { SelectButton } from 'primereact/selectbutton';
 import { useUserModule } from '../../../hooks/useUserModule';
 import type { CreateUserRequest } from '../../../services/userService';
 import { Toast } from 'primereact/toast';      // Componente de notificación
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 
 
@@ -27,6 +27,8 @@ const userTypeOptions = [
 
 export const UserForm = ({ onAuthSuccess }: UserFormProps) => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const prefilledEmail = location.state?.email || '';
     const toast = useRef<Toast>(null);
     const { companies, roles, isLoadingData, isCreating, createUser } = useUserModule();
     const [userType, setUserType] = useState('SELLER');

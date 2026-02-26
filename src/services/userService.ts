@@ -36,5 +36,17 @@ export const userService = {
     /** Asigna roles a un usuario existente */
     assignRoles: async (userId: number, roleIds: number[]): Promise<void> => {
         await apiClient.post(`/users/${userId}/roles`, { roleIds });
+    },
+
+    /** Verifica si un email ya está registrado en el sistema */
+    checkEmailExists: async (email: string): Promise<{ exists: boolean }> => {
+        const response = await apiClient.get<{ exists: boolean }>(`/users/check-email?email=${email}`);
+        return response.data;
+    },
+
+    /** Intento de login tradicional */
+    login: async (email: string, password_hash: string): Promise<AppUser> => {
+        const response = await apiClient.post<AppUser>('/auth/login', { email, password_hash });
+        return response.data;
     }
 };
