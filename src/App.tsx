@@ -3,6 +3,8 @@ import { UserForm } from './feature/auth/components/UserForm';
 import { useState } from 'react';
 import { AuthHome } from './feature/auth/pages/AuthHome';
 import { AppLayout } from './layout/AppLayout';
+import type { AppUser } from './types/auth';
+import { AuthPage } from './feature/auth/pages/AuthPage';
 
 // Pantallas temporales
 const Placeholder = (
@@ -14,33 +16,29 @@ const Placeholder = (
 
 function App() {
   const userRole: 'SELLER' | 'BUYER' = 'SELLER';
-  const [currentUser, setCurrentUser] = useState<{role: 'SELLER' | 'BUYER'} | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
+  
+  const getUserRole = (u: AppUser): 'SELLER' | 'BUYER' => {
+    return u.company_id ? 'BUYER' : 'SELLER';
+  };
 
   return (
     <BrowserRouter>
       <Routes>
-        {!currentUser ? (
-          /* Rutas Públicas */
+        {/* FLUJO DE IDENTIFICACIÓN */}
+        {!user ? (
           <>
-            <Route path="/" element={<AuthHome />} />
-            <Route path="/register" element={<UserForm onAuthSuccess={(role) => setCurrentUser({role})} />} />
-            <Route path="/login" element={<div>Login Proximamente...</div>} />
+            <Route path="/" element={<AuthPage onLogin={(u) => setUser(u)} />} />
+            <Route path="/register" element={<UserForm onAuthSuccess={() => { /* Lógica tras registro */ }} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </>
         ) : (
-          /* Rutas Protegidas por Rol */
-          <Route element={<AppLayout role={currentUser.role} />}>
-            {currentUser.role === 'SELLER' ? (
-              <>
-                <Route path="/dashboard" element={<div>Dashboard Vendedor</div>} />
-                <Route path="/usuarios" element={<UserForm />} />
-                <Route path="/inventario" element={<div>Gestión de Bodegas</div>} />
-                <Route path="/ventas" element={<div>Historial Ventas</div>} />
-                <Route path="/config" element={<div>Configuración</div>} />
-              </>
-            ) : (
-              <Route path="/dashboard" element={<div>Portal de Compras (Buyer)</div>} />
-            )}
+          /* PANELES SEGÚN ROL */
+          <Route element={<AppLayout role={getUserRole(user)} />}>
+            <Route path="/dashboard" element={<div>Módulo de Dashboard</div>} />
+            <Route path="/usuarios" element={<UserForm />} />
+            <Route path="/inventario" element={<div>Gestión de Stock</div>} />
+            {/* ... otras rutas */}
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Route>
         )}

@@ -8,14 +8,27 @@ Los usuarios pueden ser Compradores o vendedores, esto se debe distinguir en el 
 */
 
 export interface CreateUserRequest {
-    person?: Omit<Person, 'id'>; 
-    
-    // Datos del usuario: omitimos 'id' y hacemos 'person_id' opcional
-    user: Omit<AppUser, 'id' | 'person_id' | 'company_id'> & { 
-        person_id?: number; 
-        company_id?: number | null; 
-    };    
-    roles: number[]; // IDs de configuracion_det   
+    person: {
+        first_name: string;
+        last_name: string;
+        identification: string;
+        phone?: string;
+        personal_address?: string;
+    };
+    user: {
+        username: string;
+        email: string;
+        password_hash: string;
+        company_id?: number | null;
+    };
+    // Añadimos esta propiedad para que el error desaparezca
+    company?: {
+        legal_name: string;
+        tax_id: string;
+        address?: string;
+        phoneNumber?: string;
+    };
+    roles: string[]; // O el tipo que estés usando para los IDs de roles
 }
 
 

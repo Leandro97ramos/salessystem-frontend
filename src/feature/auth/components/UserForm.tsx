@@ -9,6 +9,7 @@ import { SelectButton } from 'primereact/selectbutton';
 import { useUserModule } from '../../../hooks/useUserModule';
 import type { CreateUserRequest } from '../../../services/userService';
 import { Toast } from 'primereact/toast';      // Componente de notificación
+import { Divider } from 'primereact/divider';  // Componente de división
 import { useLocation, useNavigate } from 'react-router-dom';
 
 
@@ -28,21 +29,44 @@ const userTypeOptions = [
 export const UserForm = ({ onAuthSuccess }: UserFormProps) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const prefilledEmail = location.state?.email || '';
     const toast = useRef<Toast>(null);
     const { companies, roles, isLoadingData, isCreating, createUser } = useUserModule();
     const [userType, setUserType] = useState('SELLER');
-    
+
+    const prefilledEmail = location.state?.email || '';
+    const prefilledPassword = location.state?.password || '';
+
+
+
+
     // Estado inicial basado en tus interfaces: Person, AppUser y Roles
     const [formData, setFormData] = useState({
-        person: { first_name: '', last_name: '', identification: '', phone: '', personal_address: '' },
-        user: { username: '', email: '', password_hash: '', company_id: null as number | null },
-        selectedRoles: [] as number[]
+        person: {
+            first_name: '',
+            last_name: '',
+            identification: '',
+            phone: '',
+            personal_address: ''
+        },
+        user: {
+            username: '',
+            email: prefilledEmail,
+            password_hash: prefilledPassword, // Ya viene cargado
+            company_id: null
+        },
+        company: {
+            legal_name: '',
+            tax_id: '',
+            personal_address: '',
+            phoneNumber: ''
+        },
+
+        selectedRoles: []
     });
 
     const onSave = async (e: React.FormEvent) => {
         e.preventDefault();
-    
+
         const payload: CreateUserRequest = {
             person: { ...formData.person }, // Datos de la tabla 'person'
             user: {
@@ -53,47 +77,43 @@ export const UserForm = ({ onAuthSuccess }: UserFormProps) => {
                 company_id: userType === 'BUYER' ? formData.user.company_id : undefined,
                 // No incluimos person_id porque enviamos el objeto 'person' arriba
             },
+            company: userType === 'SELLER' ? formData.company : undefined,
             roles: formData.selectedRoles // Mapeo a 'roles' como espera el servicio
         };
-    
+
         try {
             await createUser(payload);
+            toast.current?.show({ severity: 'success', summary: 'Éxito', detail: 'Cuenta creada correctamente' });
 
-            // Notificación de Éxito
             if (onAuthSuccess) {
-                const roleDetermined = userType === 'BUYER' ? 'BUYER' : 'SELLER';
-                onAuthSuccess(roleDetermined);
-                // La redirección a /dashboard la hará el App.tsx al cambiar el estado
+                onAuthSuccess(userType as 'SELLER' | 'BUYER');
             } else {
-                // Si se usa desde adentro del panel de admin, solo avisamos éxito
-                toast.current?.show({ severity: 'success', summary: 'Éxito', detail: 'Usuario creado' });
+                setTimeout(() => navigate('/dashboard'), 2000);
             }
-
         } catch (err) {
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'No se pudo crear el usuario. Revisa los datos o la conexión.',
-                life: 5000
-            });
+            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Error al registrarse' });
         }
     };
 
-    if (isLoadingData) return <div className="p-4">Cargando configuraciones...</div>;
+    //if (isLoadingData) return <div className="p-4">Cargando...</div>;
 
     return (
         <div className="flex justify-content-center p-4">
             <Toast ref={toast} />
             <Card title="Registro de Usuario" className="w-full md:w-10 lg:w-8 shadow-2">
                 <form onSubmit={onSave} className="p-fluid grid">
-                    
-                    {/* 1. Selector de Tipo de Usuario */}
-                    <div className="col-12 mb-3">
-                        <label className="block mb-2 font-bold">Tipo de Perfil</label>
-                        <SelectButton 
-                            value={userType} 
-                            options={userTypeOptions} 
-                            onChange={(e) => setUserType(e.value)} 
+
+                    {/* Selector de Perfil - Esto define el ROL automáticamente */}
+                    <div className="col-12 mb-4">
+                        <label className="block mb-2 font-bold text-center">Selecciona tu Rol en el Sistema</label>
+                        <SelectButton
+                            value={userType}
+                            options={[
+                                { label: 'Vendedor', value: 'SELLER' },
+                                { label: 'Comprador', value: 'BUYER' }
+                            ]}
+                            onChange={(e) => setUserType(e.value)}
+                            className="flex justify-content-center"
                         />
                     </div>
 
@@ -101,14 +121,37 @@ export const UserForm = ({ onAuthSuccess }: UserFormProps) => {
                     <div className="col-12"><h5>Información Personal</h5></div>
                     <div className="field col-12 md:col-6">
                         <span className="p-float-label">
-                            <InputText id="first_name" value={formData.person.first_name} onChange={(e) => setFormData({...formData, person: {...formData.person, first_name: e.target.value}})} required />
+                            <InputText id="first_name" value={formData.person.first_name} onChange={(e) => setFormData({ ...formData, person: { ...formData.person, first_name: e.target.value } })} required />
                             <label htmlFor="first_name">Nombres</label>
                         </span>
                     </div>
                     <div className="field col-12 md:col-6">
                         <span className="p-float-label">
-                            <InputText id="last_name" value={formData.person.last_name} onChange={(e) => setFormData({...formData, person: {...formData.person, last_name: e.target.value}})} required />
+                            <InputText id="last_name" value={formData.person.last_name} onChange={(e) => setFormData({ ...formData, person: { ...formData.person, last_name: e.target.value } })} required />
                             <label htmlFor="last_name">Apellidos</label>
+                        </span>
+                    </div>
+
+
+
+                    <div className="field col-12 md:col-4">
+                        <span className="p-float-label">
+                            <InputText value={formData.person.identification} onChange={(e) => setFormData({ ...formData, person: { ...formData.person, identification: e.target.value } })} required />
+                            <label >Identificación (DNI/Cédula)</label>
+                        </span>
+                    </div>
+
+                    <div className="field col-12 md:col-4">
+                        <span className="p-float-label">
+                            <InputText value={formData.person.phone} onChange={(e) => setFormData({ ...formData, person: { ...formData.person, phone: e.target.value } })} />
+                            <label >Teléfono</label>
+                        </span>
+                    </div>
+
+                    <div className="field col-12 md:col-4">
+                        <span className="p-float-label">
+                            <InputText value={formData.person.personal_address} onChange={(e) => setFormData({ ...formData, person: { ...formData.person, personal_address: e.target.value } })} />
+                            <label >Dirección Personal</label>
                         </span>
                     </div>
 
@@ -116,53 +159,43 @@ export const UserForm = ({ onAuthSuccess }: UserFormProps) => {
                     <div className="col-12 mt-3"><h5>Credenciales de Acceso</h5></div>
                     <div className="field col-12 md:col-4">
                         <span className="p-float-label">
-                            <InputText id="username" value={formData.user.username} onChange={(e) => setFormData({...formData, user: {...formData.user, username: e.target.value}})} required />
+                            <InputText id="username" value={formData.user.username} onChange={(e) => setFormData({ ...formData, user: { ...formData.user, username: e.target.value } })} required />
                             <label htmlFor="username">Nombre de Usuario</label>
                         </span>
                     </div>
                     <div className="field col-12 md:col-8">
                         <span className="p-float-label">
-                            <InputText id="email" type="email" value={formData.user.email} onChange={(e) => setFormData({...formData, user: {...formData.user, email: e.target.value}})} required />
+                            <InputText id="email" type="email" value={formData.user.email} onChange={(e) => setFormData({ ...formData, user: { ...formData.user, email: e.target.value } })} required />
                             <label htmlFor="email">Correo Electrónico</label>
                         </span>
                     </div>
 
-                    {/* 4. Asignación Lógica (Empresa y Roles) */}
-                    <div className="col-12 mt-3"><h5>Configuración del Sistema</h5></div>
-                    
                     {/* RENDERIZADO CONDICIONAL: Solo si es COMPRADOR */}
-                    {userType === 'BUYER' && (
-                        <div className="field col-12 md:col-6 animate-fadein">
-                            <label htmlFor="company" className="font-semibold">Empresa del Comprador</label>
-                            <Dropdown 
-                                id="company" 
-                                value={formData.user.company_id} 
-                                options={companies} 
-                                optionLabel="legal_name" 
-                                optionValue="id" 
-                                placeholder="Seleccione una Empresa"
-                                onChange={(e) => setFormData({...formData, user: {...formData.user, company_id: e.value}})}
-                                filter // Para búsqueda rápida
-                            />
-                        </div>
+                    {userType === 'SELLER' && (
+                        <>
+                            <div className="col-12 mt-4">
+                                <Divider align="left"><b>Datos de la Empresa</b></Divider></div>
+                            <div className="field col-12 md:col-6">
+                                <label className="font-bold">Nombre Legal</label>
+                                <InputText value={formData.company.legal_name} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, legal_name: e.target.value } })} required />
+                            </div>
+                            <div className="field col-12 md:col-6">
+                                <label className="font-bold">Tax ID / RUT</label>
+                                <InputText value={formData.company.tax_id} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, tax_id: e.target.value } })} required />
+                            </div>
+                        </>
                     )}
 
-                    <div className={`field col-12 ${userType === 'BUYER' ? 'md:col-6' : 'md:col-12'}`}>
-                        <label htmlFor="roles" className="font-semibold">Roles del Sistema</label>
-                        <MultiSelect 
-                            id="roles" 
-                            value={formData.selectedRoles} 
-                            options={roles} 
-                            optionLabel="nombre" 
-                            optionValue="configuracion_det_id" 
-                            placeholder="Asigne uno o más roles"
-                            onChange={(e) => setFormData({...formData, selectedRoles: e.value})} 
+                    <div className="col-12 flex justify-content-center mt-4">
+                        <Button
+                            label="Finalizar Registro"
+                            icon="pi pi-check"
+                            className="p-button-success p-button-lg w-full md:w-6"
+                            loading={isCreating}
                         />
                     </div>
 
-                    <div className="col-12 flex justify-content-end mt-4">
-                        <Button label="Crear Usuario" icon="pi pi-check" loading={isCreating} className="w-auto p-button-lg" />
-                    </div>
+
                 </form>
             </Card>
         </div>
